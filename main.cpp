@@ -1,13 +1,14 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 class Game2048{
     private:
         std::vector<std::vector<int> > board = {
-            {0,0,0,0},
-            {0,0,0,0},
-            {0,0,0,0},
-            {0,0,0,0}
+            {2,0,2,0},
+            {4,4,4,0},
+            {0,0,8,0},
+            {2,2,16,16}
         };
 
         // Method to use for left and top plays where rows go backward (right to left <--)
@@ -63,6 +64,16 @@ class Game2048{
                 i++;
             }
         };
+
+        void transposeOfBoard(){
+            std::vector<std::vector<int>> newMatrix(4, std::vector<int>(4,0));
+            for(int i = 0; i < 4; i++){
+                for(int j = 0; j < 4;j++){
+                    newMatrix[i][j] = board[j][i];
+                }
+            }
+            board = newMatrix;
+        }
     
     public:
         void getBoard(){
@@ -74,22 +85,55 @@ class Game2048{
             }
         };
 
-        void playLeft(std::vector<int>& singleRow){ //for left play
-            sortRows(singleRow);
-            backwardPlay(singleRow);
+        void playLeft(){ //for left play
+
+            for(int i = 0; i<=3;i++){ //to cover every row
+                std::vector<int>singleRow = board[i];
+                sortRows(singleRow);
+                backwardPlay(singleRow);
+                board[i] = singleRow;
+            }
+        }
+
+        void playRight(){ //for right play
+
+            for(int i = 0; i<=3;i++){ //to cover every row
+                std::vector<int>singleRow = board[i];
+                std::reverse(singleRow.begin(),singleRow.end()); // Reverse vector to accomdate the same as left
+                sortRows(singleRow);
+                backwardPlay(singleRow);
+                std::reverse(singleRow.begin(),singleRow.end()); // OG state
+                board[i] = singleRow;
+            }
+        }
+
+        void playTop(){
+            transposeOfBoard(); //so it can do playleft 
+            playLeft();
+            transposeOfBoard(); //get it back to normal order
+        }
+
+        void playBottom(){
+            transposeOfBoard();
+            playRight();
+            transposeOfBoard();
+        }
+
+        void test(){
+            return transposeOfBoard();
         }
 };
 
 int main(){
     // std::cout << "hi" << std::endl;
+
     Game2048 newGame;
-    std::vector<int> test = {4,0,2,2};
 
-    newGame.playLeft(test);
+    newGame.getBoard();
+    std::cout << std::endl;
+    newGame.playBottom();
+    newGame.getBoard();
 
-    for(int i = 0; i<test.size();i++){
-        std::cout << test[i] << " ";
-    }
     std::cout << std::endl;
     return 1;
 };
