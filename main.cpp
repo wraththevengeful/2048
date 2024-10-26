@@ -1,96 +1,109 @@
 #include <stdlib.h>
 #include <iostream>
-#include <vector>    //for std::vectors
-#include <algorithm> //for reversing the vectors
-#include <ctime>     //for random seed
-#include <cstdlib>   //for random generator
-#include <utility>   //for pairs
+#include <vector>
+#include <algorithm>
+#include <chrono>
+#include <ctime>   //for random seed
+#include <cstdlib> //for random generator
 #include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono::seconds
+
+// Main class that creates a game object
 class Game2048
 {
-private:
-    std::vector<std::vector<int>> board = {
-        {0, 0, 0, 0},
-        {0, 0, 0, 0},
-        {0, 0, 0, 0},
-        {0, 0, 0, 0}};
 
-    // Method to use for left and top plays where rows go backward (right to left <--)
-    void backwardPlay(std::vector<int> &singleRow)
+public:
+    Game2048()
     {
+        std::srand(std::time(0));
+        resetBoard();
+        randomSpawn(); // Spawn initial tiles
+        randomSpawn();
+    }
 
-        std::vector<int> newRow;
-        int i = 0; // while condition iterator
+private:
+    // the main game board where the game will be played in
+    std::vector<std::vector<int>> board = {
+        {1, 1, 0, 0},
+        {2, 0, 2, 0},
+        {2, 2, 4, 4},
+        {0, 2, 0, 4}};
 
-        while (i < singleRow.size())
+    void playBaseFunction()
+    { // Basic function that builds on other functions (Basically plays left when raw)
+        for (int k = 0; k < 4; k++)
         {
-            if (singleRow[i] == singleRow[i + 1])
-            {                                                      // if i and next element are same
-                newRow.push_back(singleRow[i] + singleRow[i + 1]); // add them both and push to new array
-                i += 2;                                            // point at the element after i and i+1
-            }
-            else
-            {                                   // if i and i+1 arent same
-                newRow.push_back(singleRow[i]); // push a single element to new array
-                i++;                            // go to next element
-            }
-        };
+            std::vector<int> &singleRow = board[k];
+            sortRow(singleRow);
+            std::vector<int> newRow;
+            int i = 0; // while condition iterator
 
-        // padding with 0s to keep it size 4
-        while (newRow.size() < 4)
-        {
-            newRow.push_back(0);
+            while (i < singleRow.size())
+            {
+                if (i < singleRow.size() - 1 && singleRow[i] == singleRow[i + 1])
+                {                                                      // if i and next element are same
+                    newRow.push_back(singleRow[i] + singleRow[i + 1]); // add them both and push to new array
+                    i += 2;                                            // point at the element after i and i+1
+                }
+                else
+                {                                   // if i and i+1 arent same
+                    newRow.push_back(singleRow[i]); // push a single element to new array
+                    i++;                            // go to next element
+                }
+            };
+
+            // padding with 0s to keep it size 4
+            while (newRow.size() < 4)
+            {
+                newRow.push_back(0);
+            }
+
+            board[k] = newRow; // overwrite OG row with our result
         }
+    }
 
-        singleRow = newRow; // overwrite OG row with our result
-    };
-
-    void sortRows(std::vector<int> &singleRow)
+    // Sort rows with zeroes behind
+    void sortRow(std::vector<int> &singleRow)
     {
         // sort the array to the zero elements last and non zero first
-        int i = 0;
-        while (i < singleRow.size())
+        singleRow.erase(std::remove(singleRow.begin(), singleRow.end(), 0), singleRow.end());
+        while (singleRow.size() < 4)
         {
-            // base case
-
-            // find a zero element
-            while (singleRow[i] != 0 && singleRow[i] != 0)
-            {
-                i++;
-            }
-
-            int j = i + 1;
-            // find the next non zero element
-            while (singleRow[j] == 0 && j < singleRow.size())
-            {
-                j++;
-            }
-
-            if (j == singleRow.size())
-            {
-                break;
-            }
-
-            // swap now
-            singleRow[i] = singleRow[j];
-            singleRow[j] = 0;
-
-            i++;
+            singleRow.push_back(0);
         }
-    };
+    }
 
     void transposeOfBoard()
     {
-        std::vector<std::vector<int>> newMatrix(4, std::vector<int>(4, 0));
         for (int i = 0; i < 4; i++)
         {
-            for (int j = 0; j < 4; j++)
+            for (int j = i + 1; j < 4; j++)
             {
-                newMatrix[i][j] = board[j][i];
+                std::swap(board[i][j], board[j][i]);
             }
         }
-        board = newMatrix;
+    }
+
+    void reversalOfBoard()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            std::reverse(board[i].begin(), board[i].end());
+        }
+    }
+
+    void resetBoard()
+    {
+        board = {
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0}};
+    }
+
+    int generateTileValue()
+    {
+        // Generate a random number between 0 and 9; 0-8 generates 2, 9 generates 4.
+        return (std::rand() % 10 < 9) ? 2 : 4;
     }
 
     void randomSpawn()
@@ -109,161 +122,117 @@ private:
                 }
             }
         }
-
-        std::srand(std::time(0));                           // seed random generator with current time
-        int randomIndex = std::rand() % zeroIndices.size(); // choose a random index from the list of tiles
-        board[zeroIndices[randomIndex].first][zeroIndices[randomIndex].second] = (randomIndex % 2 == 0) ? 2 : 4;
-    }
-
-    void resetBoard()
-    {
-        board = {
-            {0, 0, 0, 0},
-            {0, 0, 0, 0},
-            {0, 0, 0, 0},
-            {0, 0, 0, 0}};
+        // Only spawn if there are empty tiles available
+        if (!zeroIndices.empty())
+        {
+            int randomIndex = std::rand() % zeroIndices.size(); // choose a random index from the list of tiles
+            board[zeroIndices[randomIndex].first][zeroIndices[randomIndex].second] = generateTileValue();
+        }
     }
 
 public:
-    void getBoard()
+    bool checkWin()
     {
-        for (int i = 0; i < 4; i++)
+        for (const auto &row : board)
         {
-            for (int j = 0; j < 4; j++)
+            for (int tile : row)
             {
-                std::cout << board[i][j] << "          ";
-            }
-            std::cout << "\n\n";
-        }
-    };
-
-    void playLeft()
-    { // for left play
-
-        for (int i = 0; i <= 3; i++)
-        { // to cover every row
-            std::vector<int> singleRow = board[i];
-            sortRows(singleRow);
-            backwardPlay(singleRow);
-            board[i] = singleRow;
-        }
-        randomSpawn();
-    }
-
-    void playRight()
-    { // for right play
-
-        for (int i = 0; i <= 3; i++)
-        { // to cover every row
-            std::vector<int> singleRow = board[i];
-            std::reverse(singleRow.begin(), singleRow.end()); // Reverse vector to accomdate the same as left
-            sortRows(singleRow);
-            backwardPlay(singleRow);
-            std::reverse(singleRow.begin(), singleRow.end()); // OG state
-            board[i] = singleRow;
-        }
-        randomSpawn();
-    }
-
-    void playTop()
-    {
-        transposeOfBoard(); // so it can do playleft
-        playLeft();
-        transposeOfBoard(); // get it back to normal order
-        randomSpawn();
-    }
-
-    void playBottom()
-    {
-        transposeOfBoard();
-        playRight();
-        transposeOfBoard();
-        randomSpawn();
-    }
-
-    bool checkGameStatus()
-    {
-        bool hasFreeTiles = false;
-
-        // Check for free tiles
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                if (board[i][j] == 0)
+                if (tile == 2048)
                 {
-                    hasFreeTiles = true;
-                    break; // Found a free tile, exit inner loop
+                    return true; // Win condition met
                 }
-            }
-            if (hasFreeTiles)
-                break; // Exit outer loop if a free tile is found
-        }
-
-        bool hasAMove = false;
-
-        // Check for possible moves
-        if (!hasFreeTiles)
-        {
-            // Check rows for possible moves
-            for (int i = 0; i < 4; i++)
-            { // cover every row
-                for (int j = 0; j < 3; j++)
-                {
-                    if (board[i][j] == board[i][j + 1])
-                    {
-                        hasAMove = true;
-                        break; // Found a move, exit inner loop
-                    }
-                }
-                if (hasAMove)
-                    break; // Exit outer loop if a move is found
-            }
-
-            // Check columns for possible moves
-            for (int i = 0; i < 4; i++)
-            {
-                for (int j = 0; j < 3; j++)
-                { // Ensure not to go out of bounds
-                    if (board[j][i] == board[j + 1][i])
-                    {
-                        hasAMove = true;
-                        break; // Found a move, exit inner loop
-                    }
-                }
-                if (hasAMove)
-                    break; // Exit outer loop if a move is found
-            }
-        }
-
-        return hasAMove || hasFreeTiles; // Return true if there are free tiles or possible moves
-    }
-
-    bool checkForAWin()
-    {
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                if (board[i][j] == 2048)
-                    return true;
             }
         }
         return false;
     }
 
-    void newGame()
-    { // reset the board;
-        resetBoard();
-        randomSpawn();
+    bool checkLose()
+    {
+        // Check for empty tiles
+        for (const auto &row : board)
+        {
+            for (int tile : row)
+            {
+                if (tile == 0)
+                {
+                    return false; // There are still empty tiles, so not lost
+                }
+            }
+        }
+
+        // Check for possible merges
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                if ((j < 3 && board[i][j] == board[i][j + 1]) || // Horizontal check
+                    (i < 3 && board[i][j] == board[i + 1][j]))
+                {                 // Vertical check
+                    return false; // Possible merge exists, so not lost
+                }
+            }
+        }
+        return true; // No moves available
+    }
+
+    void showBoard()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                std::cout << board[i][j] << "       ";
+            }
+            std::cout << "\n\n";
+        }
+    }
+
+    void playLeft()
+    {
+        playBaseFunction();
         randomSpawn();
     }
 
-    void PT()
+    void playRight()
     {
+        reversalOfBoard();
+        playBaseFunction();
+        reversalOfBoard();
+        randomSpawn();
+    }
+
+    void playUp()
+    {
+        transposeOfBoard();
+        playBaseFunction();
+        transposeOfBoard();
+        randomSpawn();
+    }
+
+    void playDown()
+    {
+        transposeOfBoard();
+        reversalOfBoard();
+        playBaseFunction();
+        reversalOfBoard();
+        transposeOfBoard();
+        randomSpawn();
+    }
+
+    void test()
+    {
+        return transposeOfBoard();
+    }
+
+    void poorni(){
+        std::cout<<"Hello, poorni! (Imagine there is a heart emoji and a leaf emoji is here). Also, yes I added a cheat, you won! The message will stay on screen for 10 seconds\n\n";
         board[0][0] = 2048;
-        getBoard();
-        std::cout << "Well, Poorni...you won!\n\n";
+    }
+
+    void newGame(){
+        resetBoard();
+        randomSpawn();
+        randomSpawn();
     }
 };
 
@@ -277,117 +246,126 @@ void clearConsole()
 #endif
 }
 
-void showMenu()
-{
-    std::cout << "\n1. New Game\n"
-              << "2. Rules\n"
-              << "3. Credits\n"
-              << "4. Exit\n"
-              << std::endl
-              << std::endl
-              << "Enter your option number:  ";
-}
-
 int main()
 {
-    clearConsole();
-    Game2048 game;
-    bool onGoingGame = false;
+    Game2048 game; // Create an instance of the Game2048 class
+    bool gameActive = false;
+    char choice;
+
     while (true)
     {
-        if (!onGoingGame)
-        {
-            showMenu();
-            int choice;
-            std::cin >> choice;
+        clearConsole(); // Clear the console
+        std::cout << "=== 2048 Game Menu ===\n";
+        std::cout << "1. New Game\n";
+        std::cout << "2. Rules\n";
+        std::cout << "3. Credits\n";
+        std::cout << "4. Exit\n";
+        std::cout << "Choose an option: ";
+        std::cin >> choice;
 
-            switch (choice)
-            {
-            case 1:
-                clearConsole();
-                game.newGame();
-                game.getBoard();
-                onGoingGame = true;
-                break;
-            case 2:
-                clearConsole();
-                std::cout << "\n RULES:\nThe goal of 2048 is to reach the tile with value 2048 by merging tiles on a 4x4 grid.\n"
-                          << "Slide tiles in four directions (up, down, left, right), and when two tiles of the same\n"
-                          << "value collide, they merge into one with their combined value. After each move, a new 2 or 4\n"
-                          << "tile appears. The game ends if no more moves are possible. Win by creating a 2048 tile!\n";
-                break;
-            case 3:
-                clearConsole();
-                std::cout << "\n elanchezhiyan2440@github.com\n Copyright (c) 2014 Gabriele Cirulli\n";
-                break;
-            case 4:
-                return 2440;
-            default:
-                clearConsole();
-                std::cout << "\nPlease input a valid option.\n\n";
-                break;
-            }
-        }
-
-        while (onGoingGame)
+        switch (choice)
         {
-            if (game.checkForAWin() || !game.checkGameStatus())
-            {
-                onGoingGame = false;
-            }
+        case '1':
+            game.newGame();
+            gameActive = true;
+            break;
+
+        case '2':
             clearConsole();
-            game.getBoard();
-            while (game.checkGameStatus() && !game.checkForAWin())
-            {
-                std::cout << "\n\n1. Up   2. Down   3. Left   4.Right  5. Quit : ";
-                int choice;
-                std::cin >> choice;
+            std::cout << "=== Rules ===\n";
+            std::cout << "The objective of the game is to slide numbered tiles on a grid to combine them to create a tile with the number 2048.\n";
+            std::cout << "Use the arrow keys (or W/A/S/D) to move the tiles in that direction.\n";
+            std::cout << "When two tiles with the same number touch, they merge into one!\n";
+            std::cout << "Press any key to return to the menu...\n";
+            std::cin.ignore(); // To clear the newline character left in the input buffer
+            std::cin.get();
+            break;
 
-                switch (choice)
-                {
-                case 1:
-                    clearConsole();
-                    game.playTop();
-                    game.getBoard();
-                    break;
-                case 2:
-                    clearConsole();
-                    game.playBottom();
-                    game.getBoard();
-                    break;
-                case 4:
-                    clearConsole();
-                    game.playRight();
-                    game.getBoard();
-                    break;
-                case 3: 
-                    clearConsole();
-                    game.playLeft();
-                    game.getBoard();
-                    break;
-                case 5:
-                    onGoingGame = false;
-                    break;
-                case 89254:
-                    clearConsole();
-                    game.PT();
-                    std::this_thread::sleep_for(std::chrono::seconds(10));
-                    clearConsole();
-                default:
-                    std::cout << "Enter a valid input.";
-                    break;
-                }
+        case '3':
+            clearConsole();
+            std::cout << "=== Credits ===\n";
+            std::cout << "Developed by elanchezhiyan2440@gmail\nGame designed by Gabriele Cirulli under the MIT License.\n";
+            std::cout << "Press any key to return to the menu...\n";
+            std::cin.ignore();
+            std::cin.get();
+            break;
+
+        case '4':
+            std::cout << "Thank you for playing! Goodbye!\n";
+            return 0;
+
+        default:
+            std::cout << "Invalid choice. Please try again.\n";
+            std::cin.ignore();
+            std::cin.get();
+            break;
+        }
+
+        // Game loop
+        while (gameActive)
+        {
+            clearConsole();
+            game.showBoard(); // Display the game board
+            if (game.checkWin())
+            {
+                std::cout << "Congratulations! You've reached 2048!\n";
+                std::cout << "Press any key to return to the menu...\n";
+                std::cin.ignore();
+                std::cin.get();
+                gameActive = false;
+                break;
+            }
+            if (game.checkLose())
+            {
+                std::cout << "Game Over! No moves left.\n";
+                std::cout << "Press any key to return to the menu...\n";
+                std::cin.ignore();
+                std::cin.get();
+                gameActive = false;
+                break;
+            }
+
+            std::cout << "Enter your move (W/A/S/D for up/left/down/right, E to exit): ";
+            char move;
+            std::cin >> move;
+
+            switch (move)
+            {
+            case 'W':
+            case 'w':
+                game.playUp();
+                break;
+            case 'A':
+            case 'a':
+                game.playLeft();
+                break;
+            case 'S':
+            case 's':
+                game.playDown();
+                break;
+            case 'D':
+            case 'd':
+                game.playRight();
+                break;
+            case 'E':
+            case 'e':
+                gameActive = false; // Exit game
+                break;
+            case 'p':
+            case 'P':
+                clearConsole();
+                game.poorni();
+                game.showBoard();
+                std::this_thread::sleep_for(std::chrono::seconds(10));
+                break;
+            default:
+                std::cout << "Invalid move! Please try again.\n";
+                std::cin.ignore();
+                std::cin.get();
+                break;
             }
         }
     }
-    if (game.checkForAWin())
-    {
-        clearConsole();
-        std::cout << "You Won!\n"
-                  << std::endl;
-    }
-    else if (!game.checkGameStatus())
-    {
-        std::cout << "You Lost\n\n";
-    }
+
+    return 0;
 }
